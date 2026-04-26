@@ -1,18 +1,12 @@
-# Predicción de reincidencia criminal con auditoría de equidad algorítmica
+# Predicción de reincidencia criminal 
 
-**Proyecto Final — Inteligencia Artificial**
-Universidad de las Américas Puebla · Otoño 2024
-Profesora: Dra. Alejandra Hernández Sánchez
-
-**Autoras:** Triana Flores Macip · Daniela Renée Ramírez Gutiérrez
+**Autoras:** Triana Flores Macip, Daniela Renée Ramírez Gutiérrez
 
 ---
 
 ## Descripción del proyecto
 
-Este repositorio contiene un sistema completo de predicción de reincidencia criminal en un horizonte de tres años, implementado mediante técnicas de aprendizaje automático y acompañado de una auditoría sistemática de equidad por subgrupos demográficos. A partir de un conjunto de datos administrativos del estado de Georgia (Estados Unidos), se entrenan y comparan cuatro modelos de clasificación binaria (regresión logística, bosque aleatorio, XGBoost y LightGBM), se evalúa su desempeño predictivo, su calibración y su comportamiento por raza y género, y se construye una aplicación interactiva que permite obtener predicciones individuales para perfiles arbitrarios.
-
-El proyecto no busca exclusivamente maximizar la capacidad predictiva, sino documentar de manera transparente los compromisos entre precisión, calibración y equidad que surgen al aplicar inteligencia artificial a decisiones de alto impacto social.
+Este repositorio contiene un sistema de predicción de reincidencia criminal en un horizonte de tres años, implementado mediante técnicas de aprendizaje automático y acompañado de una auditoría sistemática de equidad por subgrupos demográficos. A partir de un conjunto de datos administrativos del estado de Georgia (Estados Unidos), se entrenan y comparan cuatro modelos de clasificación binaria (regresión logística, bosque aleatorio, XGBoost y LightGBM), se evalúa su desempeño predictivo, su calibración y su comportamiento por raza y género, y se construye una aplicación interactiva que permite obtener predicciones individuales para perfiles arbitrarios.
 
 ---
 
@@ -28,22 +22,6 @@ Recidivism-Forecasting/
 ```
 
 Al ejecutar `main.py` por primera vez, se generan automáticamente las carpetas `figuras/` (con las gráficas del análisis) y archivos auxiliares de resultados.
-
----
-
-## Requisitos
-
-* Python 3.10 o superior
-* Las siguientes librerías (todas instalables con `pip`):
-
-```bash
-pip install pandas numpy scikit-learn xgboost lightgbm joblib \
-            fairlearn shap matplotlib seaborn streamlit
-```
-
-En sistemas macOS con Python instalado vía Homebrew, puede ser necesario añadir la bandera `--break-system-packages` al comando de instalación.
-
----
 
 ## Cómo correr el proyecto
 
@@ -69,15 +47,13 @@ Los modelos entrenados se guardan en disco como archivos `.joblib`. Las gráfica
 
 ### Paso 2 — Lanzar la aplicación interactiva
 
-Una vez entrenado el modelo (o usando directamente el `modelo_XGBoost.joblib` incluido en el repo):
+Una vez entrenado el modelo (o usando directamente el `modelo_XGBoost.joblib` incluido en el repositorio):
 
 ```bash
 streamlit run app.py
 ```
 
 Esto abrirá automáticamente el navegador en `http://localhost:8501`. La aplicación presenta un formulario organizado en cuatro pestañas (Demografía, Historial criminal, Supervisión, Empleo y otros). Después de llenar los campos, al presionar **Calcular probabilidad de reincidencia**, la app devuelve la probabilidad estimada, una etiqueta cualitativa de riesgo y un panel desplegable con el vector de variables enviado al modelo.
-
-Para detener la aplicación, presionar `Ctrl + C` en la terminal.
 
 > **Aviso ético.** Esta aplicación es estrictamente demostrativa y académica. No debe utilizarse para tomar decisiones reales sobre personas. El modelo presenta brechas documentadas de equidad por raza y género que se trasladarían a cualquier decisión que dependa de él.
 
@@ -139,45 +115,13 @@ XGBoost minimiza la *log-loss* durante el entrenamiento, exactamente la misma fu
 
 $$p_i = \sigma(f(\mathbf{x}_i)) = \frac{1}{1 + e^{-f(\mathbf{x}_i)}}.$$
 
-Cuando se llama `predict_proba()`, el modelo evalúa los árboles, suma sus salidas y devuelve la probabilidad correspondiente. Para verificar que estas probabilidades son confiables (y no solo *scores* arbitrarios), evaluamos la calibración con la curva de confiabilidad y el Brier score: XGBoost obtiene el Brier más bajo de los cuatro modelos (0.168) y su curva de calibración sigue de cerca la diagonal de calibración perfecta.
-
-### Las métricas de evaluación
-
-Se reportan cuatro familias de métricas, cada una capturando una propiedad distinta del modelo:
-
-* **Discriminación.** AUC-ROC y AUC-PR miden la capacidad del modelo para ordenar correctamente los casos.
-* **Calibración.** El Brier score y la curva de confiabilidad evalúan si las probabilidades predichas corresponden a las frecuencias observadas.
-* **Equidad.** Diferencia de paridad demográfica y de equalized odds, calculadas con la librería `fairlearn`, miden brechas de comportamiento entre subgrupos demográficos.
-* **Interpretabilidad.** Valores SHAP cuantifican la contribución marginal de cada variable a las predicciones del modelo seleccionado.
-
-### Resultados principales
-
-| Modelo | AUC-ROC | AUC-PR | Brier | Accuracy | F1 |
-|---|---|---|---|---|---|
-| Regresión logística | 0.789 | 0.815 | 0.182 | 0.728 | 0.776 |
-| Random Forest | 0.803 | 0.827 | 0.180 | 0.741 | 0.792 |
-| **XGBoost** | **0.820** | **0.848** | **0.168** | 0.750 | 0.793 |
-| LightGBM | 0.815 | 0.839 | 0.171 | 0.751 | 0.794 |
-
-XGBoost es seleccionado como modelo final por su mejor desempeño en discriminación y calibración.
-
-La auditoría de equidad sobre XGBoost reveló brechas sistemáticas: la tasa de falsos positivos para personas afroamericanas (39.3%) supera por 7.4 puntos a la de personas blancas (31.9%), y la tasa de selección masculina (65.9%) supera por 22 puntos a la femenina (43.6%). Estas brechas no son fallas del modelo individual sino consecuencia matemática de la diferencia de tasas base entre grupos, un resultado teórico demostrado por Chouldechova (2017).
-
-### Interpretabilidad
-
-El análisis SHAP revela que las variables más influyentes en las predicciones de XGBoost no son indicadores de historial criminal sino de comportamiento posliberación: porcentaje de días empleado, número de empleos por año, edad al momento de la liberación e indicadores de faltantes en pruebas antidrogas. Esto tiene una doble lectura: por un lado el modelo pesa fuertemente el comportamiento presente y no se ancla en el pasado; por otro, las variables de empleo y supervisión son proxies del entorno socioeconómico y pueden correlacionarse con raza y clase.
+Cuando se llama `predict_proba()`, el modelo evalúa los árboles, suma sus salidas y devuelve la probabilidad correspondiente. Para verificar que estas probabilidades son confiables (y no solo *scores* arbitrarios), evaluamos la calibración con la curva de confiabilidad y el Brier score: XGBoost obtiene el Brier más bajo de los cuatro modelos (0.168).
 
 ---
 
 ## Reproducibilidad
 
 Toda la cadena de procesamiento utiliza semilla aleatoria fija (`SEMILLA = 42`). Ejecutar `main.py` en cualquier máquina con las mismas versiones de las librerías debe producir los mismos resultados numéricos hasta varios decimales.
-
----
-
-## Limitaciones del proyecto
-
-Tres limitaciones merecen ser mencionadas. Primero, los datos provienen de un solo estado de Estados Unidos y no son extrapolables directamente a contextos como el mexicano. Segundo, no se realizó tuning exhaustivo de hiperparámetros; búsquedas más sofisticadas con Optuna podrían mejorar el desempeño absoluto en uno o dos puntos de AUC sin alterar las conclusiones de equidad. Tercero, el dataset original restringe la variable raza a las categorías `BLACK` y `WHITE`, por lo que la auditoría no captura otros grupos demográficos.
 
 ---
 
